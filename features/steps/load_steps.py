@@ -38,15 +38,23 @@ def step_impl(context):
     #
     rest_endpoint = f"{context.base_url}/products"
     context.resp = requests.get(rest_endpoint)
-    assert(context.resp.status_code == HTTP_200_OK)
+    # Use assert() or self.assertEqual() if in a class context
+    assert context.resp.status_code == HTTP_200_OK
     for product in context.resp.json():
         context.resp = requests.delete(f"{rest_endpoint}/{product['id']}")
-        assert(context.resp.status_code == HTTP_204_NO_CONTENT)
+        assert context.resp.status_code == HTTP_204_NO_CONTENT
 
     #
     # load the database with new products
     #
     for row in context.table:
-        #
-        # ADD YOUR CODE HERE TO CREATE PRODUCTS VIA THE REST API
-        #
+        # FIX: Ensure the following lines are indented correctly
+        payload = {
+            "name": row['name'],
+            "description": row['description'],
+            "price": row['price'],
+            "available": row['available'].lower() in ['true', 'yes', '1'],
+            "category": row['category']
+        }
+        context.resp = requests.post(rest_endpoint, json=payload)
+        assert context.resp.status_code == HTTP_201_CREATED

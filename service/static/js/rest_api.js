@@ -9,17 +9,15 @@ $(function () {
         $("#product_id").val(res.id);
         $("#product_name").val(res.name);
         $("#product_description").val(res.description);
-        if (res.available == true) {
-            $("#product_available").val("true");
-        } else {
-            $("#product_available").val("false");
-        }
+        // Set dropdown based on boolean value
+        $("#product_available").val(res.available ? "true" : "false");
         $("#product_category").val(res.category);
         $("#product_price").val(res.price);
     }
 
     /// Clears all form fields
     function clear_form_data() {
+        $("#product_id").val(""); // Clear ID as well
         $("#product_name").val("");
         $("#product_description").val("");
         $("#product_available").val("");
@@ -41,7 +39,7 @@ $(function () {
 
         let name = $("#product_name").val();
         let description = $("#product_description").val();
-        let available = $("#product_available").val() == "true";
+        let available = $("#product_available").val() === "true"; // Strict comparison
         let category = $("#product_category").val();
         let price = $("#product_price").val();
 
@@ -54,7 +52,7 @@ $(function () {
         };
 
         $("#flash_message").empty();
-        
+
         let ajax = $.ajax({
             type: "POST",
             url: "/products",
@@ -80,9 +78,14 @@ $(function () {
     $("#update-btn").click(function () {
 
         let product_id = $("#product_id").val();
+        // Check if product_id is empty
+        if (!product_id) {
+            flash_message("Please retrieve a product before updating.");
+            return;
+        }
         let name = $("#product_name").val();
         let description = $("#product_description").val();
-        let available = $("#product_available").val() == "true";
+        let available = $("#product_available").val() === "true"; // Strict comparison
         let category = $("#product_category").val();
         let price = $("#product_price").val();
 
@@ -122,12 +125,18 @@ $(function () {
 
         let product_id = $("#product_id").val();
 
+        // Check if product_id is empty
+        if (!product_id) {
+            flash_message("Please enter a Product ID.");
+            return;
+        }
+
         $("#flash_message").empty();
 
         let ajax = $.ajax({
             type: "GET",
             url: `/products/${product_id}`,
-            contentType: "application/json",
+            contentType: "application/json", // Not strictly needed for GET with no body
             data: ''
         })
 
@@ -152,22 +161,30 @@ $(function () {
 
         let product_id = $("#product_id").val();
 
+        // Check if product_id is empty
+        if (!product_id) {
+            flash_message("Please retrieve a product before deleting.");
+            return;
+        }
+
         $("#flash_message").empty();
 
         let ajax = $.ajax({
             type: "DELETE",
             url: `/products/${product_id}`,
-            contentType: "application/json",
+            contentType: "application/json", // Not strictly needed for DELETE
             data: '',
         })
 
         ajax.done(function(res){
             clear_form_data()
-            flash_message("Product has been Deleted!")
+            // FIX: Use the standard "Success" message
+            flash_message("Success")
         });
 
         ajax.fail(function(res){
-            flash_message("Server error!")
+            // Handle potential errors (e.g., network issues)
+            flash_message("Server error or Product not found.")
         });
     });
 
@@ -176,38 +193,25 @@ $(function () {
     // ****************************************
 
     $("#clear-btn").click(function () {
-        $("#product_id").val("");
+        $("#product_id").val(""); // Also clear ID field
         $("#flash_message").empty();
         clear_form_data()
     });
 
     // ****************************************
-    // Search for a Product
+    // Search for a Product (List All / Query)
     // ****************************************
 
     $("#search-btn").click(function () {
 
         let name = $("#product_name").val();
-        let description = $("#product_description").val();
-        let available = $("#product_available").val() == "true";
         let category = $("#product_category").val();
+        let available_str = $("#product_available").val(); // Get selected value ("true", "false", or "")
 
         let queryString = ""
 
         if (name) {
             queryString += 'name=' + name
-        }
-        if (description) {
-            if (queryString.length > 0) {
-                queryString += '&'  // add separator
-            }
-            queryString += 'description=' + description
-        }
-        if (available) {
-            if (queryString.length > 0) {
-                queryString += '&'  // add separator
-            }
-            queryString += 'available=' + available
         }
         if (category) {
             if (queryString.length > 0) {
@@ -215,32 +219,39 @@ $(function () {
             }
             queryString += 'category=' + category
         }
+        if (available_str !== "") { // Only add if a selection was made
+             if (queryString.length > 0) {
+                 queryString += '&'  // add separator
+             }
+             // Send 'true' or 'false' as strings
+             queryString += 'available=' + available_str
+         }
 
         $("#flash_message").empty();
 
         let ajax = $.ajax({
             type: "GET",
-            url: `/products?${queryString}`,
-            contentType: "application/json",
+            url: `/products?${queryString}`, // Use BASE_URL from routes.py logic
+            contentType: "application/json", // Not needed for GET
             data: ''
         })
 
+        // This is the corrected 'ajax.done' block for Search/List All
         ajax.done(function(res){
-            //alert(res.toSource())
-            $("#search_results").empty();
-            let table = '<table class="table table-striped" cellpadding="10">'
-            table += '<thead><tr>'
-            table += '<th class="col-md-2">ID</th>'
-            table += '<th class="col-md-2">Name</th>'
-            table += '<th class="col-md-2">Description</th>'
-            table += '<th class="col-md-2">Available</th>'
-            table += '<th class="col-md-2">Category</th>'
-            table += '<th class="col-md-2">Price</th>'
-            table += '</tr></thead><tbody>'
+            $("#search_results").empty(); // Clear previous results
+            let table = '<table class="table table-striped" cellpadding="10">';
+            table += '<thead><tr>';
+            table += '<th class="col-md-2">ID</th>';
+            table += '<th class="col-md-2">Name</th>';
+            table += '<th class="col-md-2">Description</th>';
+            table += '<th class="col-md-2">Available</th>';
+            table += '<th class="col-md-2">Category</th>';
+            table += '<th class="col-md-2">Price</th>';
+            table += '</tr></thead><tbody>';
             let firstProduct = "";
             for(let i = 0; i < res.length; i++) {
                 let product = res[i];
-                table +=  `<tr id="row_${i}"><td>${product.id}</td><td>${product.name}</td><td>${product.description}</td><td>${product.available}</td><td>${product.category}</td><td>${product.price}</td></tr>`;
+                table += `<tr id="row_${i}"><td>${product.id}</td><td>${product.name}</td><td>${product.description}</td><td>${product.available}</td><td>${product.category}</td><td>${product.price}</td></tr>`;
                 if (i == 0) {
                     firstProduct = product;
                 }
@@ -251,6 +262,9 @@ $(function () {
             // copy the first result to the form
             if (firstProduct != "") {
                 update_form_data(firstProduct)
+            } else {
+                // If no results, clear the form
+                clear_form_data();
             }
 
             flash_message("Success")
